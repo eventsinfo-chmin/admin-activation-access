@@ -1,7 +1,9 @@
+/************************************************************
+ * ADMIN LOGIN
+ ************************************************************/
+
 const form =
-  document.getElementById(
-    "loginForm"
-  );
+  document.getElementById("loginForm");
 
 
 form.addEventListener(
@@ -13,52 +15,40 @@ form.addEventListener(
 
     const scriptInput =
       document
-        .getElementById(
-          "scriptId"
-        )
+        .getElementById("scriptId")
         .value
         .trim();
 
 
     const username =
       document
-        .getElementById(
-          "username"
-        )
+        .getElementById("username")
         .value
         .trim();
 
 
     const password =
       document
-        .getElementById(
-          "password"
-        )
+        .getElementById("password")
         .value;
 
 
     const button =
-      document.getElementById(
-        "loginButton"
-      );
+      document.getElementById("loginButton");
 
 
     const message =
-      document.getElementById(
-        "message"
-      );
+      document.getElementById("message");
 
 
     const scriptUrl =
-      normalizeScriptUrl(
-        scriptInput
-      );
+      normalizeScriptUrl(scriptInput);
 
 
     if (!scriptUrl) {
 
       showMessage(
-        "Invalid Google Apps Script ID or URL.",
+        "Invalid Google Apps Script ID or Web App URL.",
         false
       );
 
@@ -73,39 +63,87 @@ form.addEventListener(
       "Logging in...";
 
 
-    message.textContent =
-      "Connecting...";
+    showMessage(
+      "Connecting to Google Apps Script...",
+      true
+    );
 
 
     try {
+
+      /*
+       * IMPORTANT:
+       *
+       * There is NO connection token.
+       *
+       * Only:
+       *
+       * action
+       * username
+       * password
+       */
+
+      const requestBody = {
+
+        action:
+          "adminLogin",
+
+        username:
+          username,
+
+        password:
+          password
+
+      };
+
+
+      console.log(
+        "Admin Login URL:",
+        scriptUrl
+      );
+
+
+      console.log(
+        "Admin Login Action:",
+        requestBody.action
+      );
+
 
       const response =
         await fetch(
           scriptUrl,
           {
 
-            method: "POST",
+            method:
+              "POST",
 
             body:
-              JSON.stringify({
-
-                action:
-                  "adminLogin",
-
-                username:
-                  username,
-
-                password:
-                  password
-
-              })
+              JSON.stringify(
+                requestBody
+              )
 
           }
         );
 
 
+      if (!response.ok) {
+
+        throw new Error(
+          "HTTP " +
+          response.status
+        );
+
+      }
+
+
       const data =
         await response.json();
+
+
+      console.log(
+        "Admin Login Response:",
+        data
+      );
 
 
       if (
@@ -128,9 +166,12 @@ form.addEventListener(
 
 
       /*
-       * Store only temporary information.
+       * Store only:
        *
-       * Password is NOT stored.
+       * Script URL
+       * Temporary admin session
+       *
+       * Username/password are NOT stored.
        */
 
       sessionStorage.setItem(
@@ -145,14 +186,43 @@ form.addEventListener(
       );
 
 
-      window.location.href =
-        "activation.html";
+      /*
+       * Remove any old values from
+       * previous versions of the project.
+       */
+
+      localStorage.removeItem(
+        "connectionToken"
+      );
+
+
+      localStorage.removeItem(
+        "scannerToken"
+      );
+
+
+      localStorage.removeItem(
+        "eventToken"
+      );
+
+
+      sessionStorage.removeItem(
+        "connectionToken"
+      );
+
+
+      window.location.replace(
+        "activation.html"
+      );
 
     }
 
     catch (error) {
 
-      console.error(error);
+      console.error(
+        "Admin Login Error:",
+        error
+      );
 
 
       showMessage(
@@ -176,7 +246,7 @@ form.addEventListener(
 
 
 /************************************************************
- * NORMALIZE SCRIPT ID
+ * NORMALIZE SCRIPT URL
  ************************************************************/
 
 function normalizeScriptUrl(value) {
@@ -187,15 +257,28 @@ function normalizeScriptUrl(value) {
     ).trim();
 
 
+  /*
+   * Complete Web App URL
+   */
+
   if (
-    /^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/i
+    /^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec(?:\?.*)?$/i
       .test(value)
   ) {
 
-    return value;
+    /*
+     * Remove query parameters if someone
+     * pasted ?action=status, etc.
+     */
+
+    return value.split("?")[0];
 
   }
 
+
+  /*
+   * Deployment ID only
+   */
 
   if (
     /^[A-Za-z0-9_-]+$/
@@ -236,7 +319,9 @@ function showMessage(
 
 
   message.className =
+
     "message " +
+
     (
       success
         ? "success"
