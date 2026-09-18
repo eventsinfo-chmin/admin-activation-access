@@ -11,7 +11,7 @@
   content="width=device-width, initial-scale=1.0"
 >
 
-<title>Records Portal</title>
+<title>Admin Login</title>
 
 <link
   rel="stylesheet"
@@ -24,184 +24,105 @@
 <body>
 
 
-<header>
+<div class="page">
 
-<div class="header-inner">
+<div class="card">
 
-<div>
 
 <div class="brand">
-RECORDS
+ADMIN
 </div>
+
 
 <h1>
-Records Portal
+Administrator Login
 </h1>
 
-</div>
 
-
-<div
-  id="connectionBadge"
-  class="badge checking"
->
-Checking...
-</div>
-
-
-</div>
-
-</header>
-
-
-
-<main>
-
-
-<section
-  id="inactivePanel"
-  class="panel hidden"
->
-
-<h2>
-Service Not Activated
-</h2>
-
-<p>
-The administrator has not activated
-the Google Sheet connection.
+<p class="subtitle">
+Google Sheet Connection
 </p>
 
-</section>
 
 
-
-<div
-  id="application"
-  class="hidden"
->
-
-
-<section class="panel">
-
-<h2>
-Search Records
-</h2>
-
-
-<div class="search-row">
-
-<input
-  id="searchInput"
-  type="search"
-  placeholder="Search name, email or information..."
->
-
-
-<button
-  id="searchButton"
-  onclick="searchRecords()"
->
-Search
-</button>
-
-</div>
-
-
-<div
-  id="searchMessage"
-  class="message"
-></div>
-
-
-<div
-  id="searchResults"
-  class="results"
-></div>
-
-</section>
-
-
-
-<section class="panel">
-
-<h2>
-Submit Record
-</h2>
-
-
-<form id="recordForm">
+<form id="loginForm">
 
 
 <div class="field">
 
-<label for="name">
-Full Name
+<label for="scriptId">
+Google Script ID / Web App URL
 </label>
 
 <input
-  id="name"
+  id="scriptId"
   type="text"
+  placeholder="Deployment ID or https://script.google.com/..."
   required
 >
 
 </div>
 
 
+
 <div class="field">
 
-<label for="email">
-Email Address
+<label for="username">
+Admin Username
 </label>
 
 <input
-  id="email"
-  type="email"
+  id="username"
+  type="text"
+  autocomplete="username"
+  required
 >
 
 </div>
+
 
 
 <div class="field">
 
-<label for="information">
-Information
+<label for="password">
+Admin Password
 </label>
 
-<textarea
-  id="information"
-  rows="4"
-></textarea>
+<input
+  id="password"
+  type="password"
+  autocomplete="current-password"
+  required
+>
 
 </div>
 
 
+
 <button
-  id="saveButton"
+  id="loginButton"
   type="submit"
 >
-Save Record
+Login
 </button>
-
-
-<div
-  id="submitMessage"
-  class="message"
-></div>
 
 
 </form>
 
-</section>
+
+
+<div
+  id="message"
+  class="message"
+></div>
 
 
 </div>
 
+</div>
 
-</main>
 
-
-<script src="app.js"></script>
+<script src="admin.js"></script>
 
 
 </body>
