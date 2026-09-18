@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1.0"
+>
+
+<title>Connection Settings</title>
+
+<link
+  rel="stylesheet"
+  href="style.css"
+>
+
+</head>
+
+
+<body>
+
+
+<div class="page">
+
+<div class="card wide">
+
+
+<div class="topbar">
+
+
+<div>
+
+<div class="brand">
+ADMIN
+</div>
+
+<h1>
+Connection Settings
+</h1>
+
+</div>
+
+
+<button
+  class="secondary small"
+  onclick="logout()"
+>
+Logout
+</button>
+
+
+</div>
+
+
+
+<div class="connection-info">
+
+<div class="info-label">
+Google Apps Script
+</div>
+
+<div
+  id="scriptDisplay"
+  class="script-display"
+>
+Loading...
+</div>
+
+</div>
+
+
+
+<div class="status-box">
+
+<span
+  id="statusDot"
+  class="status-dot inactive"
+></span>
+
+<span id="statusText">
+NOT ACTIVATED
+</span>
+
+</div>
+
+
+
+<div class="button-grid">
+
+
+<button
+  id="activateButton"
+  class="activate"
+  onclick="activateConnection()"
+>
+Activate
+</button>
+
+
+<button
+  id="deactivateButton"
+  class="danger"
+  onclick="deactivateConnection()"
+>
+Deactivate
+</button>
+
+
+</div>
+
+
+
+<div
+  id="message"
+  class="message"
+></div>
+
+
+</div>
+
+</div>
+
+
+<script>
+
+
+/************************************************************
+ * ACTIVATION API
+ *
+ * Replace this ONE URL.
+ ************************************************************/
+
+const ACTIVATION_API =
+  "https://script.google.com/macros/s/AKfycbwE911qC9WwR_XGEmUiU9WlUBkLbw4Fduxq_kqHQsurtX3X41skLXfE3nJ1AElNe8jpEQ/exec";
+
+
+
+const scriptUrl =
+  sessionStorage.getItem(
+    "adminScriptUrl"
+  );
+
+
+const adminSession =
+  sessionStorage.getItem(
+    "adminSession"
+  );
+
+
+
+/************************************************************
+ * REQUIRE LOGIN
+ ************************************************************/
+
+if (
+  !scriptUrl ||
+  !adminSession
+) {
+
+  window.location.replace(
+    "index.html"
+  );
+
+}
+
+
+
+/************************************************************
+ * DISPLAY SCRIPT
+ ************************************************************/
+
+document
+  .getElementById(
+    "scriptDisplay"
+  )
+  .textContent =
+    scriptUrl;
+
+
+
+/************************************************************
+ * ACTIVATE
+ ************************************************************/
+
+async function activateConnection() {
+
+  setButtons(true);
+
+
+  showMessage(
+    "Establishing connection...",
+    true
+  );
+
+
+  try {
+
+    const response =
+      await fetch(
+        ACTIVATION_API,
+        {
+
+          method: "POST",
+
+          body:
+            JSON.stringify({
+
+              action:
+                "activate",
+
+              scriptUrl:
+                scriptUrl,
+
+              adminSession:
+                adminSession
+
+            })
+
+        }
+      );
+
+
+    const data =
+      await response.json();
+
+
+    if (!data.success) {
+
+      if (
+        String(
+          data.message || ""
+        )
+        .toLowerCase()
+        .includes("session")
+      ) {
+
+        sessionExpired();
+
+        return;
+
+      }
+
+
+      showMessage(
+        data.message ||
+        "Activation failed.",
+        false
+      );
+
+      return;
+
+    }
+
+
+    updateStatus(true);
+
+
+    showMessage(
+      "Google Sheet connection activated successfully.",
+      true
+    );
+
+  }
+
+  catch (error) {
+
+    console.error(error);
+
+
+    showMessage(
+      "Unable to activate connection.",
+      false
+    );
+
+  }
+
+  finally {
+
+    setButtons(false);
+
+  }
+
+}
+
+
+
+/************************************************************
+ * DEACTIVATE
+ ************************************************************/
+
+async function deactivateConnection() {
+
+  const confirmed =
+    confirm(
+      "Deactivate the User site Google Sheet connection?"
+    );
+
+
+  if (!confirmed) {
+
+    return;
+
+  }
+
+
+  setButtons(true);
+
+
+  showMessage(
+    "Deactivating connection...",
+    true
+  );
+
+
+  try {
+
+    const response =
+      await fetch(
+        ACTIVATION_API,
+        {
+
+          method: "POST",
+
+          body:
+            JSON.stringify({
+
+              action:
+                "deactivate",
+
+              scriptUrl:
+                scriptUrl,
+
+              adminSession:
+                adminSession
+
+            })
+
+        }
+      );
+
+
+    const data =
+      await response.json();
+
+
+    if (!data.success) {
+
+      showMessage(
+        data.message ||
+        "Deactivation failed.",
+        false
+      );
+
+      return;
+
+    }
+
+
+    updateStatus(false);
+
+
+    showMessage(
+      "Google Sheet connection deactivated.",
+      true
+    );
+
+  }
+
+  catch (error) {
+
+    console.error(error);
+
+
+    showMessage(
+      "Unable to deactivate connection.",
+      false
+    );
+
+  }
+
+  finally {
+
+    setButtons(false);
+
+  }
+
+}
+
+
+
+/************************************************************
+ * STATUS
+ ************************************************************/
+
+function updateStatus(active) {
+
+  const dot =
+    document.getElementById(
+      "statusDot"
+    );
+
+
+  const text =
+    document.getElementById(
+      "statusText"
+    );
+
+
+  const activate =
+    document.getElementById(
+      "activateButton"
+    );
+
+
+  const deactivate =
+    document.getElementById(
+      "deactivateButton"
+    );
+
+
+  if (active) {
+
+    dot.className =
+      "status-dot active";
+
+
+    text.textContent =
+      "ACTIVE";
+
+
+    activate.disabled =
+      true;
+
+
+    deactivate.disabled =
+      false;
+
+  }
+
+  else {
+
+    dot.className =
+      "status-dot inactive";
+
+
+    text.textContent =
+      "NOT ACTIVATED";
+
+
+    activate.disabled =
+      false;
+
+
+    deactivate.disabled =
+      true;
+
+  }
+
+}
+
+
+
+/************************************************************
+ * BUTTON STATE
+ ************************************************************/
+
+function setButtons(disabled) {
+
+  document
+    .getElementById(
+      "activateButton"
+    )
+    .disabled =
+      disabled;
+
+
+  document
+    .getElementById(
+      "deactivateButton"
+    )
+    .disabled =
+      disabled;
+
+}
+
+
+
+/************************************************************
+ * LOGOUT
+ ************************************************************/
+
+async function logout() {
+
+  try {
+
+    await fetch(
+      scriptUrl,
+      {
+
+        method: "POST",
+
+        body:
+          JSON.stringify({
+
+            action:
+              "adminLogout",
+
+            sessionToken:
+              adminSession
+
+          })
+
+      }
+    );
+
+  }
+
+  catch (error) {}
+
+
+  sessionStorage.removeItem(
+    "adminScriptUrl"
+  );
+
+
+  sessionStorage.removeItem(
+    "adminSession"
+  );
+
+
+  window.location.replace(
+    "index.html"
+  );
+
+}
+
+
+
+/************************************************************
+ * SESSION EXPIRED
+ ************************************************************/
+
+function sessionExpired() {
+
+  sessionStorage.removeItem(
+    "adminScriptUrl"
+  );
+
+
+  sessionStorage.removeItem(
+    "adminSession"
+  );
+
+
+  alert(
+    "Administrator session expired. Please login again."
+  );
+
+
+  window.location.replace(
+    "index.html"
+  );
+
+}
+
+
+
+/************************************************************
+ * MESSAGE
+ ************************************************************/
+
+function showMessage(
+  text,
+  success
+) {
+
+  const message =
+    document.getElementById(
+      "message"
+    );
+
+
+  message.className =
+    "message " +
+    (
+      success
+        ? "success"
+        : "error"
+    );
+
+
+  message.textContent =
+    text;
+
+}
+
+
+/*
+ * Initial state.
+ *
+ * In the next revision we can have this page
+ * automatically read connection.json and determine
+ * the real current activation state.
+ */
+
+updateStatus(false);
+
+
+</script>
+
+
+</body>
+
+</html>
