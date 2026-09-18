@@ -11,7 +11,7 @@
   content="width=device-width, initial-scale=1.0"
 >
 
-<title>Admin Login</title>
+<title>Records Portal</title>
 
 <link
   rel="stylesheet"
@@ -24,74 +24,184 @@
 <body>
 
 
-<div class="page">
+<header>
 
-<div class="card">
+<div class="header-inner">
 
+<div>
 
 <div class="brand">
-ADMIN
+RECORDS
+</div>
+
+<h1>
+Records Portal
+</h1>
+
 </div>
 
 
-<h1>
-Administrator Login
-</h1>
+<div
+  id="connectionBadge"
+  class="badge checking"
+>
+Checking...
+</div>
 
 
-<p class="subtitle">
-Connection Management
+</div>
+
+</header>
+
+
+
+<main>
+
+
+<section
+  id="inactivePanel"
+  class="panel hidden"
+>
+
+<h2>
+Service Not Activated
+</h2>
+
+<p>
+The administrator has not activated
+the Google Sheet connection.
 </p>
 
+</section>
 
-<form
-  id="loginForm"
-  autocomplete="off"
+
+
+<div
+  id="application"
+  class="hidden"
 >
+
+
+<section class="panel">
+
+<h2>
+Search Records
+</h2>
+
+
+<div class="search-row">
+
+<input
+  id="searchInput"
+  type="search"
+  placeholder="Search name, email or information..."
+>
+
+
+<button
+  id="searchButton"
+  onclick="searchRecords()"
+>
+Search
+</button>
+
+</div>
+
+
+<div
+  id="searchMessage"
+  class="message"
+></div>
+
+
+<div
+  id="searchResults"
+  class="results"
+></div>
+
+</section>
+
+
+
+<section class="panel">
+
+<h2>
+Submit Record
+</h2>
+
+
+<form id="recordForm">
 
 
 <div class="field">
 
-<label for="password">
-Admin Password
+<label for="name">
+Full Name
 </label>
 
 <input
-  id="password"
-  type="password"
-  placeholder="Enter administrator password"
-  autocomplete="current-password"
+  id="name"
+  type="text"
   required
 >
 
 </div>
 
 
-<button
-  id="loginButton"
-  type="submit"
+<div class="field">
+
+<label for="email">
+Email Address
+</label>
+
+<input
+  id="email"
+  type="email"
 >
 
-Login
+</div>
 
+
+<div class="field">
+
+<label for="information">
+Information
+</label>
+
+<textarea
+  id="information"
+  rows="4"
+></textarea>
+
+</div>
+
+
+<button
+  id="saveButton"
+  type="submit"
+>
+Save Record
 </button>
 
 
-</form>
-
-
 <div
-  id="message"
+  id="submitMessage"
   class="message"
 ></div>
 
 
-</div>
+</form>
+
+</section>
+
 
 </div>
 
 
-<script src="admin.js"></script>
+</main>
+
+
+<script src="app.js"></script>
 
 
 </body>
