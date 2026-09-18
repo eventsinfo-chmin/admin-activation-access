@@ -251,55 +251,82 @@ form.addEventListener(
 
 function normalizeScriptUrl(value) {
 
-  value =
-    String(
-      value || ""
-    ).trim();
+  let input =
+    String(value || "")
+      .trim();
 
-
-  /*
-   * Complete Web App URL
-   */
-
-  if (
-    /^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec(?:\?.*)?$/i
-      .test(value)
-  ) {
-
-    /*
-     * Remove query parameters if someone
-     * pasted ?action=status, etc.
-     */
-
-    return value.split("?")[0];
-
+  if (!input) {
+    return "";
   }
 
 
   /*
-   * Deployment ID only
+   * Remove accidental spaces,
+   * line breaks and tabs.
+   */
+
+  input =
+    input.replace(/\s+/g, "");
+
+
+  /*
+   * FULL GOOGLE APPS SCRIPT WEB APP URL
+   *
+   * Example:
+   * https://script.google.com/macros/s/AKfycb.../exec
+   */
+
+  if (
+    input.startsWith(
+      "https://script.google.com/macros/s/"
+    )
+  ) {
+
+    /*
+     * Remove query string if user pasted
+     * ?action=status etc.
+     */
+
+    input =
+      input.split("?")[0];
+
+
+    /*
+     * Must end with /exec
+     */
+
+    if (
+      !input.endsWith("/exec")
+    ) {
+      return "";
+    }
+
+
+    return input;
+  }
+
+
+  /*
+   * DEPLOYMENT ID ONLY
+   *
+   * Example:
+   * AKfycbxxxxxxxxxxxxxxxx
    */
 
   if (
     /^[A-Za-z0-9_-]+$/
-      .test(value)
+      .test(input)
   ) {
 
     return (
-
       "https://script.google.com/macros/s/" +
-
-      value +
-
+      input +
       "/exec"
-
     );
-
   }
 
 
   return "";
-
 }
 
 
