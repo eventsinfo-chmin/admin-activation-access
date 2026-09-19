@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="en">
 
 <head>
@@ -11,7 +10,9 @@
   content="width=device-width, initial-scale=1.0"
 >
 
-<title>Connection Settings</title>
+<title>
+Connection Settings
+</title>
 
 <link
   rel="stylesheet"
@@ -29,8 +30,11 @@
 <div class="card wide">
 
 
-<div class="topbar">
+<!-- ======================================================
+     TOP BAR
+======================================================= -->
 
+<div class="topbar">
 
 <div>
 
@@ -46,16 +50,19 @@ Connection Settings
 
 
 <button
+  id="logoutButton"
   class="secondary small"
-  onclick="logout()"
+  type="button"
 >
 Logout
 </button>
 
-
 </div>
 
 
+<!-- ======================================================
+     CONNECTION INFORMATION
+======================================================= -->
 
 <div class="connection-info">
 
@@ -73,6 +80,9 @@ Loading...
 </div>
 
 
+<!-- ======================================================
+     CONNECTION STATUS
+======================================================= -->
 
 <div class="status-box">
 
@@ -82,20 +92,23 @@ Loading...
 ></span>
 
 <span id="statusText">
-NOT ACTIVATED
+CHECKING...
 </span>
 
 </div>
 
 
+<!-- ======================================================
+     BUTTONS
+======================================================= -->
 
 <div class="button-grid">
-
 
 <button
   id="activateButton"
   class="activate"
-  onclick="activateConnection()"
+  type="button"
+  disabled
 >
 Activate
 </button>
@@ -104,15 +117,18 @@ Activate
 <button
   id="deactivateButton"
   class="danger"
-  onclick="deactivateConnection()"
+  type="button"
+  disabled
 >
 Deactivate
 </button>
 
-
 </div>
 
 
+<!-- ======================================================
+     MESSAGE
+======================================================= -->
 
 <div
   id="message"
@@ -131,13 +147,21 @@ Deactivate
 /************************************************************
  * ACTIVATION API
  *
- * Replace this ONE URL.
+ * IMPORTANT:
+ *
+ * This must be the /exec URL of the SEPARATE
+ * ActivationAPI Apps Script project.
+ *
+ * It is NOT the ConnectionAPI URL entered during login.
  ************************************************************/
 
 const ACTIVATION_API =
   "https://script.google.com/macros/s/AKfycbwE911qC9WwR_XGEmUiU9WlUBkLbw4Fduxq_kqHQsurtX3X41skLXfE3nJ1AElNe8jpEQ/exec";
 
 
+/************************************************************
+ * SESSION
+ ************************************************************/
 
 const scriptUrl =
   sessionStorage.getItem(
@@ -151,9 +175,54 @@ const adminSession =
   );
 
 
+/************************************************************
+ * DOM ELEMENTS
+ ************************************************************/
+
+const scriptDisplay =
+  document.getElementById(
+    "scriptDisplay"
+  );
+
+
+const statusDot =
+  document.getElementById(
+    "statusDot"
+  );
+
+
+const statusText =
+  document.getElementById(
+    "statusText"
+  );
+
+
+const activateButton =
+  document.getElementById(
+    "activateButton"
+  );
+
+
+const deactivateButton =
+  document.getElementById(
+    "deactivateButton"
+  );
+
+
+const logoutButton =
+  document.getElementById(
+    "logoutButton"
+  );
+
+
+const messageBox =
+  document.getElementById(
+    "message"
+  );
+
 
 /************************************************************
- * REQUIRE LOGIN
+ * CHECK ADMIN SESSION EXISTS
  ************************************************************/
 
 if (
@@ -168,27 +237,189 @@ if (
 }
 
 
-
 /************************************************************
- * DISPLAY SCRIPT
+ * DISPLAY CONNECTION API
  ************************************************************/
 
-document
-  .getElementById(
-    "scriptDisplay"
-  )
-  .textContent =
-    scriptUrl;
-
+scriptDisplay.textContent =
+  scriptUrl || "";
 
 
 /************************************************************
- * ACTIVATE
+ * LOAD CURRENT ACTIVATION STATUS
+ *
+ * This checks the ACTUAL GitHub connection.json
+ * through ActivationAPI.
+ *
+ * Therefore refreshing this page will NOT
+ * automatically reset the UI to NOT ACTIVATED.
+ ************************************************************/
+
+async function loadActivationStatus(
+  showStatusMessage = true
+) {
+
+  setCheckingState();
+
+
+  try {
+
+    const response =
+      await fetch(
+        ACTIVATION_API,
+        {
+
+          method:
+            "POST",
+
+          body:
+            JSON.stringify({
+
+              action:
+                "status",
+
+              scriptUrl:
+                scriptUrl,
+
+              adminSession:
+                adminSession
+
+            })
+
+        }
+      );
+
+
+    if (!response.ok) {
+
+      throw new Error(
+        "Activation API HTTP " +
+        response.status
+      );
+
+    }
+
+
+    const data =
+      await response.json();
+
+
+    console.log(
+      "Activation status:",
+      data
+    );
+
+
+    /******************************************************
+     * SESSION EXPIRED
+     ******************************************************/
+
+    if (
+      data.sessionExpired === true
+    ) {
+
+      sessionExpired();
+
+      return;
+
+    }
+
+
+    /******************************************************
+     * STATUS FAILED
+     ******************************************************/
+
+    if (
+      data.success !== true
+    ) {
+
+      setUnknownState();
+
+
+      showMessage(
+        data.message ||
+        "Unable to check connection status.",
+        false
+      );
+
+
+      return;
+
+    }
+
+
+    /******************************************************
+     * CURRENT STATUS
+     ******************************************************/
+
+    updateStatus(
+      data.active === true
+    );
+
+
+    if (
+      showStatusMessage
+    ) {
+
+      if (
+        data.active === true
+      ) {
+
+        showMessage(
+          "Google Sheet connection is currently active.",
+          true
+        );
+
+      }
+
+      else {
+
+        showMessage(
+          "Google Sheet connection is currently inactive.",
+          false
+        );
+
+      }
+
+    }
+
+  }
+
+  catch (error) {
+
+    console.error(
+      "STATUS ERROR:",
+      error
+    );
+
+
+    setUnknownState();
+
+
+    showMessage(
+      "Unable to check connection status.",
+      false
+    );
+
+  }
+
+}
+
+
+/************************************************************
+ * ACTIVATE CONNECTION
  ************************************************************/
 
 async function activateConnection() {
 
-  setButtons(true);
+  /*
+   * Prevent double-clicking while
+   * activation is processing.
+   */
+
+  setButtons(
+    true
+  );
 
 
   showMessage(
@@ -204,7 +435,8 @@ async function activateConnection() {
         ACTIVATION_API,
         {
 
-          method: "POST",
+          method:
+            "POST",
 
           body:
             JSON.stringify({
@@ -224,26 +456,48 @@ async function activateConnection() {
       );
 
 
+    if (!response.ok) {
+
+      throw new Error(
+        "Activation API HTTP " +
+        response.status
+      );
+
+    }
+
+
     const data =
       await response.json();
 
 
-    if (!data.success) {
+    console.log(
+      "Activation response:",
+      data
+    );
 
-      if (
-        String(
-          data.message || ""
-        )
-        .toLowerCase()
-        .includes("session")
-      ) {
 
-        sessionExpired();
+    /******************************************************
+     * SESSION EXPIRED
+     ******************************************************/
 
-        return;
+    if (
+      data.sessionExpired === true
+    ) {
 
-      }
+      sessionExpired();
 
+      return;
+
+    }
+
+
+    /******************************************************
+     * ACTIVATION FAILED
+     ******************************************************/
+
+    if (
+      data.success !== true
+    ) {
 
       showMessage(
         data.message ||
@@ -251,24 +505,54 @@ async function activateConnection() {
         false
       );
 
+
+      /*
+       * Reload real status so buttons
+       * don't remain disabled.
+       */
+
+      await loadActivationStatus(
+        false
+      );
+
+
       return;
 
     }
 
 
-    updateStatus(true);
+    /******************************************************
+     * ACTIVATION SUCCESSFUL
+     ******************************************************/
+
+    updateStatus(
+      true
+    );
 
 
     showMessage(
+      data.message ||
       "Google Sheet connection activated successfully.",
       true
+    );
+
+
+    /*
+     * Verify GitHub's actual state.
+     */
+
+    await loadActivationStatus(
+      false
     );
 
   }
 
   catch (error) {
 
-    console.error(error);
+    console.error(
+      "ACTIVATION ERROR:",
+      error
+    );
 
 
     showMessage(
@@ -276,20 +560,22 @@ async function activateConnection() {
       false
     );
 
+
+    /*
+     * Recover button state.
+     */
+
+    await loadActivationStatus(
+      false
+    );
+
   }
 
-  finally {
-
-  await loadActivationStatus();
-
 }
-
-}
-
 
 
 /************************************************************
- * DEACTIVATE
+ * DEACTIVATE CONNECTION
  ************************************************************/
 
 async function deactivateConnection() {
@@ -307,7 +593,13 @@ async function deactivateConnection() {
   }
 
 
-  setButtons(true);
+  /*
+   * Prevent double-clicking.
+   */
+
+  setButtons(
+    true
+  );
 
 
   showMessage(
@@ -323,7 +615,8 @@ async function deactivateConnection() {
         ACTIVATION_API,
         {
 
-          method: "POST",
+          method:
+            "POST",
 
           body:
             JSON.stringify({
@@ -343,11 +636,48 @@ async function deactivateConnection() {
       );
 
 
+    if (!response.ok) {
+
+      throw new Error(
+        "Activation API HTTP " +
+        response.status
+      );
+
+    }
+
+
     const data =
       await response.json();
 
 
-    if (!data.success) {
+    console.log(
+      "Deactivation response:",
+      data
+    );
+
+
+    /******************************************************
+     * SESSION EXPIRED
+     ******************************************************/
+
+    if (
+      data.sessionExpired === true
+    ) {
+
+      sessionExpired();
+
+      return;
+
+    }
+
+
+    /******************************************************
+     * DEACTIVATION FAILED
+     ******************************************************/
+
+    if (
+      data.success !== true
+    ) {
 
       showMessage(
         data.message ||
@@ -355,24 +685,49 @@ async function deactivateConnection() {
         false
       );
 
+
+      await loadActivationStatus(
+        false
+      );
+
+
       return;
 
     }
 
 
-    loadActivationStatus();
+    /******************************************************
+     * DEACTIVATION SUCCESSFUL
+     ******************************************************/
+
+    updateStatus(
+      false
+    );
 
 
     showMessage(
+      data.message ||
       "Google Sheet connection deactivated.",
       true
+    );
+
+
+    /*
+     * Confirm actual GitHub state.
+     */
+
+    await loadActivationStatus(
+      false
     );
 
   }
 
   catch (error) {
 
-    console.error(error);
+    console.error(
+      "DEACTIVATION ERROR:",
+      error
+    );
 
 
     showMessage(
@@ -380,213 +735,82 @@ async function deactivateConnection() {
       false
     );
 
-  }
-
-  finally {
-
-  await loadActivationStatus();
-
-}
-
-}
-
-/************************************************************
- * LOAD CURRENT ACTIVATION STATUS
- ************************************************************/
-
-async function loadActivationStatus() {
-
-  /*
-   * Start in checking state.
-   */
-
-  const statusText =
-    document.getElementById(
-      "statusText"
-    );
-
-
-  statusText.textContent =
-    "CHECKING...";
-
-
-  setButtons(true);
-
-
-  try {
-
-    const response =
-      await fetch(
-        ACTIVATION_API,
-        {
-          method: "POST",
-
-          body:
-            JSON.stringify({
-              action:
-                "status",
-
-              scriptUrl:
-                scriptUrl,
-
-              adminSession:
-                adminSession
-            })
-        }
-      );
-
-
-    const data =
-      await response.json();
-
 
     /*
-     * Session expired.
+     * Recover button state.
      */
 
-    if (
-      data.sessionExpired
-    ) {
-
-      sessionExpired();
-      return;
-
-    }
-
-
-    if (!data.success) {
-
-      showMessage(
-        data.message ||
-        "Unable to check connection status.",
-        false
-      );
-
-      return;
-
-    }
-
-
-    /*
-     * Use ACTUAL GitHub configuration.
-     */
-
-    updateStatus(
-      data.active === true
-    );
-
-
-    if (data.active) {
-
-      showMessage(
-        "Google Sheet connection is currently active.",
-        true
-      );
-
-    } else {
-
-      showMessage(
-        "Google Sheet connection is currently inactive.",
-        false
-      );
-
-    }
-
-  }
-
-  catch (error) {
-
-    console.error(
-      "STATUS ERROR:",
-      error
-    );
-
-
-    showMessage(
-      "Unable to check connection status.",
+    await loadActivationStatus(
       false
     );
 
   }
 
-  finally {
-
-    /*
-     * updateStatus() normally sets the
-     * appropriate button states.
-     *
-     * If loading failed, enable Activate
-     * so administrator isn't locked out.
-     */
-
-  }
-
 }
 
+
 /************************************************************
- * STATUS
+ * ACTIVE / INACTIVE UI
  ************************************************************/
 
 function updateStatus(active) {
 
-  const dot =
-    document.getElementById(
-      "statusDot"
-    );
-
-
-  const text =
-    document.getElementById(
-      "statusText"
-    );
-
-
-  const activate =
-    document.getElementById(
-      "activateButton"
-    );
-
-
-  const deactivate =
-    document.getElementById(
-      "deactivateButton"
-    );
-
-
   if (active) {
 
-    dot.className =
+    /******************************************************
+     * ACTIVE
+     ******************************************************/
+
+    statusDot.className =
       "status-dot active";
 
 
-    text.textContent =
+    statusText.textContent =
       "ACTIVE";
 
 
-    activate.disabled =
+    /*
+     * Already active:
+     *
+     * Activate   = disabled
+     * Deactivate = enabled
+     */
+
+    activateButton.disabled =
       true;
 
 
-    deactivate.disabled =
+    deactivateButton.disabled =
       false;
 
   }
 
   else {
 
-    dot.className =
+    /******************************************************
+     * NOT ACTIVATED
+     ******************************************************/
+
+    statusDot.className =
       "status-dot inactive";
 
 
-    text.textContent =
+    statusText.textContent =
       "NOT ACTIVATED";
 
 
-    activate.disabled =
+    /*
+     * Currently inactive:
+     *
+     * Activate   = enabled
+     * Deactivate = disabled
+     */
+
+    activateButton.disabled =
       false;
 
 
-    deactivate.disabled =
+    deactivateButton.disabled =
       true;
 
   }
@@ -594,30 +818,86 @@ function updateStatus(active) {
 }
 
 
+/************************************************************
+ * CHECKING STATE
+ ************************************************************/
+
+function setCheckingState() {
+
+  statusDot.className =
+    "status-dot inactive";
+
+
+  statusText.textContent =
+    "CHECKING...";
+
+
+  /*
+   * Disable both until actual status
+   * has been determined.
+   */
+
+  activateButton.disabled =
+    true;
+
+
+  deactivateButton.disabled =
+    true;
+
+}
+
 
 /************************************************************
- * BUTTON STATE
+ * UNKNOWN STATE
+ *
+ * If status cannot be read, don't pretend
+ * that the connection is deactivated.
+ ************************************************************/
+
+function setUnknownState() {
+
+  statusDot.className =
+    "status-dot inactive";
+
+
+  statusText.textContent =
+    "STATUS UNKNOWN";
+
+
+  /*
+   * Allow Activate as recovery option.
+   *
+   * Keep Deactivate disabled because we
+   * don't know the current state.
+   */
+
+  activateButton.disabled =
+    false;
+
+
+  deactivateButton.disabled =
+    true;
+
+}
+
+
+/************************************************************
+ * DISABLE / ENABLE BOTH BUTTONS
+ *
+ * Primarily used while Activate or
+ * Deactivate is processing.
  ************************************************************/
 
 function setButtons(disabled) {
 
-  document
-    .getElementById(
-      "activateButton"
-    )
-    .disabled =
-      disabled;
+  activateButton.disabled =
+    disabled;
 
 
-  document
-    .getElementById(
-      "deactivateButton"
-    )
-    .disabled =
-      disabled;
+  deactivateButton.disabled =
+    disabled;
 
 }
-
 
 
 /************************************************************
@@ -626,13 +906,27 @@ function setButtons(disabled) {
 
 async function logout() {
 
+  /*
+   * Disable logout while processing.
+   */
+
+  logoutButton.disabled =
+    true;
+
+
   try {
+
+    /*
+     * Tell ConnectionAPI to invalidate
+     * the temporary admin session.
+     */
 
     await fetch(
       scriptUrl,
       {
 
-        method: "POST",
+        method:
+          "POST",
 
         body:
           JSON.stringify({
@@ -650,17 +944,22 @@ async function logout() {
 
   }
 
-  catch (error) {}
+  catch (error) {
+
+    /*
+     * Even if server logout fails,
+     * remove browser session.
+     */
+
+    console.warn(
+      "Server logout failed:",
+      error
+    );
+
+  }
 
 
-  sessionStorage.removeItem(
-    "adminScriptUrl"
-  );
-
-
-  sessionStorage.removeItem(
-    "adminSession"
-  );
+  clearAdminSession();
 
 
   window.location.replace(
@@ -670,21 +969,13 @@ async function logout() {
 }
 
 
-
 /************************************************************
  * SESSION EXPIRED
  ************************************************************/
 
 function sessionExpired() {
 
-  sessionStorage.removeItem(
-    "adminScriptUrl"
-  );
-
-
-  sessionStorage.removeItem(
-    "adminSession"
-  );
+  clearAdminSession();
 
 
   alert(
@@ -699,6 +990,23 @@ function sessionExpired() {
 }
 
 
+/************************************************************
+ * CLEAR ADMIN SESSION
+ ************************************************************/
+
+function clearAdminSession() {
+
+  sessionStorage.removeItem(
+    "adminScriptUrl"
+  );
+
+
+  sessionStorage.removeItem(
+    "adminSession"
+  );
+
+}
+
 
 /************************************************************
  * MESSAGE
@@ -709,14 +1017,10 @@ function showMessage(
   success
 ) {
 
-  const message =
-    document.getElementById(
-      "message"
-    );
+  messageBox.className =
 
-
-  message.className =
     "message " +
+
     (
       success
         ? "success"
@@ -724,19 +1028,48 @@ function showMessage(
     );
 
 
-  message.textContent =
-    text;
+  messageBox.textContent =
+    text || "";
 
 }
 
 
-/*
- * Initial state.
+/************************************************************
+ * EVENT LISTENERS
+ ************************************************************/
+
+activateButton.addEventListener(
+  "click",
+  activateConnection
+);
+
+
+deactivateButton.addEventListener(
+  "click",
+  deactivateConnection
+);
+
+
+logoutButton.addEventListener(
+  "click",
+  logout
+);
+
+
+/************************************************************
+ * START
  *
- * In the next revision we can have this page
- * automatically read connection.json and determine
- * the real current activation state.
- */
+ * IMPORTANT:
+ *
+ * Do NOT use:
+ *
+ *   updateStatus(false);
+ *
+ * here.
+ *
+ * The actual status must come from
+ * GitHub through ActivationAPI.
+ ************************************************************/
 
 loadActivationStatus();
 
