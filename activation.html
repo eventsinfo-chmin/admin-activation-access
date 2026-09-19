@@ -366,7 +366,7 @@ async function loadActivationStatus(
       ) {
 
         showMessage(
-          "Google Sheet connection is currently active.",
+          "Connection is currently active.",
           true
         );
 
@@ -375,7 +375,7 @@ async function loadActivationStatus(
       else {
 
         showMessage(
-          "Google Sheet connection is currently inactive.",
+          "Connection is currently inactive.",
           false
         );
 
@@ -532,7 +532,7 @@ async function activateConnection() {
 
     showMessage(
       data.message ||
-      "Google Sheet connection activated successfully.",
+      "Connection activated successfully.",
       true
     );
 
@@ -582,7 +582,7 @@ async function deactivateConnection() {
 
   const confirmed =
     confirm(
-      "Deactivate the User site Google Sheet connection?"
+      "Deactivate the User connection?"
     );
 
 
@@ -707,7 +707,7 @@ async function deactivateConnection() {
 
     showMessage(
       data.message ||
-      "Google Sheet connection deactivated.",
+      "Connection deactivated.",
       true
     );
 
